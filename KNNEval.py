@@ -32,6 +32,21 @@ best_k = 0
 
 fig, axs = plt.subplots(2, 5, figsize=(15, 8))
 
+# Crear listas para almacenar las precisiones en cada conjunto
+precisions_train = []
+precisions_test = []
+precisions_validation = []
+
+# Crear listas para almacenar el sesgo, la varianza y el nivel de ajuste
+bias_scores = []
+variance_scores = []
+fit_scores = []
+
+# Umbral para considerar una diferencia significativa:
+umbral_diferencia = 0.02
+
+
+
 # Probar diferentes valores de k y encontrar el mejor
 for k in range(1, 11):  # Probar valores de k de 1 a 20
     knn = KNeighborsClassifier(n_neighbors=k)
@@ -39,9 +54,37 @@ for k in range(1, 11):  # Probar valores de k de 1 a 20
 
     # Evaluar el modelo en el conjunto de prueba y validación
 
+    y_pred_train = knn.predict(X_train)
     y_pred_test = knn.predict(X_test)  # Cambia X_test por tus datos de prueba reales
     y_pred_val = knn.predict(X_val)
     y_true_test = y_test  # Cambia y_test por tus etiquetas de prueba reales
+
+    precision_train = accuracy_score(y_train, y_pred_train)
+    precision_test = accuracy_score(y_test, y_pred_test)
+    precision_validation = accuracy_score(y_val, y_pred_val)
+
+    precisions_train.append(precision_train)
+    precisions_test.append(precision_test)
+    precisions_validation.append(precision_validation)
+
+    accuracy_train = accuracy_score(y_train, y_pred_train)
+    accuracy_test = accuracy_score(y_test, y_pred_test)
+
+    # Calcular sesgo y varianza
+    bias = 1 - accuracy_train
+    variance = accuracy_train - accuracy_test
+
+    # Calcular el nivel de ajuste
+    if abs(bias) <= umbral_diferencia and abs(variance) <= umbral_diferencia:
+        fit = "Adecuado"
+    elif bias < 0 and variance > 0:
+        fit = "Overfitting"
+    else:
+        fit = "Underfitting"
+
+    bias_scores.append(bias)
+    variance_scores.append(variance)
+    fit_scores.append(fit)
 
 # Generar el informe de clasificación
     report = classification_report(y_true_test, y_pred_test)
@@ -72,6 +115,57 @@ for k in range(1, 11):  # Probar valores de k de 1 a 20
         best_k = k
 
 plt.tight_layout()
+plt.show()
+
+# Crear un gráfico para comparar las precisiones en los tres conjuntos
+plt.figure(figsize=(10, 6))
+plt.plot(range(1, 11), precisions_train, marker='o', label='Entrenamiento')
+plt.plot(range(1, 11), precisions_test, marker='o', label='Prueba')
+plt.plot(range(1, 11), precisions_validation, marker='o', label='Validación')
+
+plt.xlabel('Valor de K')
+plt.ylabel('Precisión')
+plt.title('Comparación de Precisión en los Conjuntos de Datos')
+plt.xticks(range(1, 11))
+plt.legend()
+plt.grid(True)
+
+plt.show()
+
+# Crear gráficos para sesgo, varianza y nivel de ajuste
+plt.figure(figsize=(12, 6))
+
+# Gráfico de sesgo
+plt.subplot(1, 2, 1)
+plt.plot(range(1, 11), bias_scores, marker='o', color='red')
+plt.xlabel('Valor de K')
+plt.ylabel('Sesgo')
+plt.title('Sesgo vs. Valor de K')
+
+# Gráfico de varianza
+plt.subplot(1, 2, 2)
+plt.plot(range(1, 11), variance_scores, marker='o', color='blue')
+plt.xlabel('Valor de K')
+plt.ylabel('Varianza')
+plt.title('Varianza vs. Valor de K')
+
+# Crear un gráfico de nivel de ajuste
+fit_levels = ["Adecuado" if abs(b) <= umbral_diferencia and abs(v) <= umbral_diferencia
+              else "Underfitting" if b < 0 and v >= 0
+              else "Overfitting" for b, v in zip(bias_scores, variance_scores)]
+
+# Gráfico de nivel de ajuste
+plt.figure(figsize=(8, 6))
+colors = {'Adecuado': 'green', 'Underfitting': 'red', 'Overfitting': 'red'}
+fit_colors = [colors[fit] for fit in fit_levels]
+
+plt.bar(range(1, 11), bias_scores, color=fit_colors)
+plt.xlabel('Valor de K')
+plt.ylabel('Sesgo')
+plt.title('Nivel de Ajuste vs. Valor de K. Verde = Adecuado. Rojo = Over/Underfitting')
+plt.xticks(range(1, 11))
+plt.grid(True)
+
 plt.show()
 
 print("\nEL MEJOR VALOR DE K FUE: ", best_k, "\n")
@@ -118,21 +212,21 @@ plt.show()
 
 print ("Accuracy_train: ", accuracy_train, "Accuracy_test: ", accuracy_test, "Accuracy_validation: ", accuracy_validation, "\n")
 
-# Umbral para considerar una diferencia significativa (puedes ajustarlo según tus necesidades)
-umbral_diferencia = 0.05
+# # Umbral para considerar una diferencia significativa:
+# umbral_diferencia = 0.05
 
-# Sesgo y Varianza: comprobar si la diferencia entre Accuracy_train y Accuracy_test es significativa
-diferencia_train_test = accuracy_train - accuracy_test
-if abs(diferencia_train_test) <= umbral_diferencia:
-    print("La diferencia entre precisión en entrenamiento y prueba es baja o moderada.\n")
-else:
-    print("La diferencia entre precisión en entrenamiento y prueba es alta (varianza).\n")
+# # Sesgo y Varianza: comprobar si la diferencia entre Accuracy_train y Accuracy_test es significativa
+# diferencia_train_test = accuracy_train - accuracy_test
+# if abs(diferencia_train_test) <= umbral_diferencia:
+#     print("La diferencia entre precisión en entrenamiento y prueba es baja o moderada.\n")
+# else:
+#     print("La diferencia entre precisión en entrenamiento y prueba es alta (varianza).\n")
 
-# Comprobar si la diferencia entre Accuracy_train y Accuracy_validation es significativa
-diferencia_train_validation = accuracy_train - accuracy_validation
-if abs(diferencia_train_validation) <= umbral_diferencia:
-    print("La diferencia entre precisión en entrenamiento y validación es baja o moderada.\n")
-else:
-    print("La diferencia entre precisión en entrenamiento y validación es alta (varianza).\n")
+# # Comprobar si la diferencia entre Accuracy_train y Accuracy_validation es significativa
+# diferencia_train_validation = accuracy_train - accuracy_validation
+# if abs(diferencia_train_validation) <= umbral_diferencia:
+#     print("La diferencia entre precisión en entrenamiento y validación es baja o moderada.\n")
+# else:
+#     print("La diferencia entre precisión en entrenamiento y validación es alta (varianza).\n")
 
 
